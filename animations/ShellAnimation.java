@@ -16,7 +16,10 @@ public class ShellAnimation implements Animation {
 		universeCount++;
 		
 		if (universeCount == 1) {
-			return new ShellUniverse();
+			return new MazeUniverse();
+		}
+		else if (universeCount == 2) {
+			return new CakeUniverse();
 		}
 		else {
 			return null;

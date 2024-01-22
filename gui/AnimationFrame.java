@@ -32,7 +32,7 @@ public class AnimationFrame extends JFrame {
 	private int screenOffsetX = SCREEN_WIDTH / 2;
 	private int screenOffsetY = SCREEN_HEIGHT / 2;
 
-	private boolean SHOW_GRID = true;
+	private boolean SHOW_GRID = false;
 	private boolean DISPLAY_TIMING = false;
 	
 	//scale at which to render the universe. When 1, each logical unit represents 1 pixel in both x and y dimension
@@ -43,13 +43,15 @@ public class AnimationFrame extends JFrame {
 
 	//basic controls on interface... these are protected so that subclasses can access
 	protected JPanel panel = null;
-	protected JButton btnPauseRun;
+	protected JButton btnNoClip;
 	protected JLabel lblTop;
+	protected JLabel lblMid;
 	protected JLabel lblBottom;
 
 	private static boolean stop = false;
 
 	protected long total_elapsed_time = 0;
+	protected long final_time = 0;
 	protected long lastRefreshTime = 0;
 	protected long deltaTime = 0;
 	protected boolean isPaused = false;
@@ -128,20 +130,19 @@ public class AnimationFrame extends JFrame {
 		panel.setLayout(null);
 		panel.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 		getContentPane().add(panel, BorderLayout.CENTER);
+			btnNoClip = new JButton("||");
+			btnNoClip.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseClicked(MouseEvent arg0) {
+					btnNoClip_mouseClicked(arg0);
+				}
+			});
 
-		btnPauseRun = new JButton("||");
-		btnPauseRun.addMouseListener(new MouseAdapter() {
-			@Override
-			public void mouseClicked(MouseEvent arg0) {
-				btnPauseRun_mouseClicked(arg0);
-			}
-		});
-
-		btnPauseRun.setFont(new Font("Tahoma", Font.BOLD, 12));
-		btnPauseRun.setBounds(SCREEN_WIDTH - 64, 20, 48, 32);
-		btnPauseRun.setFocusable(false);
-		getContentPane().add(btnPauseRun);
-		getContentPane().setComponentZOrder(btnPauseRun, 0);
+			btnNoClip.setFont(new Font("Tahoma", Font.BOLD, 12));
+			btnNoClip.setBounds(SCREEN_WIDTH - 64, 20, 48, 32);
+			btnNoClip.setFocusable(false);
+			getContentPane().add(btnNoClip);
+			getContentPane().setComponentZOrder(btnNoClip, 0);
 
 		lblTop = new JLabel("Time: ");
 		lblTop.setForeground(Color.WHITE);
@@ -149,6 +150,14 @@ public class AnimationFrame extends JFrame {
 		lblTop.setBounds(16, 22, SCREEN_WIDTH - 16, 30);
 		getContentPane().add(lblTop);
 		getContentPane().setComponentZOrder(lblTop, 0);
+		
+		lblMid = new JLabel("Time: ");
+		lblMid.setForeground(Color.WHITE);
+		lblMid.setFont(new Font("Consolas", Font.BOLD, 20));
+		lblMid.setBounds(0, SCREEN_HEIGHT - 360, SCREEN_WIDTH, 30);
+		lblMid.setHorizontalAlignment(SwingConstants.CENTER);
+		getContentPane().add(lblMid);
+		getContentPane().setComponentZOrder(lblMid, 0);
 
 		lblBottom = new JLabel("Status");
 		lblBottom.setForeground(Color.WHITE);
@@ -276,36 +285,46 @@ public class AnimationFrame extends JFrame {
 	}
 
 	private void handleUniverseComplete() {
-		universe = animation.getNextUniverse();		
+		universe = animation.getNextUniverse();
+		final_time = total_elapsed_time / 1000;
+		getContentPane().remove(btnNoClip); 
+		
 	}
 	protected void updateControls() {
-		
-		this.lblTop.setText(String.format("Time: %9.3f;  offsetX: %5d; offsetY: %5d;  scale: %3.3f", total_elapsed_time / 1000.0, screenOffsetX, screenOffsetY, scale));
+		int leversPulled = (int) SCSprite.getLeversPulled();
+		if (ShellAnimation.getUniverseCount() == 1) {
+			this.lblTop.setText(String.format("Time: %9.3f; Levers Pulled: %5d/2", total_elapsed_time / 1000.0, leversPulled));
+		}
+		else if (ShellAnimation.getUniverseCount() == 2) {
+			this.lblTop.setText(String.format("Congrats! Your final time was %d seconds! But are you truly free?", final_time));
+		}
+		this.lblMid.setText(String.format("The Main Character"));
 		this.lblBottom.setText(Integer.toString(universeLevel));
 		if (universe != null) {
 			this.lblBottom.setText(universe.toString());
 		}
 
 	}
-
-	protected void btnPauseRun_mouseClicked(MouseEvent arg0) {
-		if (isPaused) {
-			isPaused = false;
-			this.btnPauseRun.setText("||");
+	protected void btnNoClip_mouseClicked(MouseEvent arg0) {
+		if (SCSprite.getNoClip()){
+			//isPaused = false;
+			SCSprite.noClipActivator(false);
+			this.btnNoClip.setText(":)");
 		}
 		else {
-			isPaused = true;
-			this.btnPauseRun.setText(">");
+			SCSprite.noClipActivator(true);
+			//isPaused = true;
+			this.btnNoClip.setText(">:D");
 		}
 	}
 
 	private void handleKeyboardInput() {
 		
 		if (keyboard.keyDown(KeyboardInput.KEY_P) && ! isPaused) {
-			btnPauseRun_mouseClicked(null);	
+			btnNoClip_mouseClicked(null);	
 		}
 		if (keyboard.keyDown(KeyboardInput.KEY_O) && isPaused ) {
-			btnPauseRun_mouseClicked(null);
+			btnNoClip_mouseClicked(null);
 		}
 		if (keyboard.keyDown(KeyboardInput.KEY_F1)) {
 			scale *= 1.01;
@@ -316,24 +335,24 @@ public class AnimationFrame extends JFrame {
 			contentPane_mouseMoved(null);
 		}
 		
-		if (keyboard.keyDown(KeyboardInput.KEY_A)) {
-			screenOffsetX += 1;
-		}
-		if (keyboard.keyDown(KeyboardInput.KEY_D)) {
-			screenOffsetX -= 1;
-		}
-		if (keyboard.keyDown(KeyboardInput.KEY_S)) {
-			screenOffsetY += 1;
-		}
-		if (keyboard.keyDown(KeyboardInput.KEY_X)) {
-			screenOffsetY -= 1;
-		}
-		if (keyboard.keyDownOnce(KeyboardInput.KEY_G)) {
-			this.SHOW_GRID = !this.SHOW_GRID;
-		}
-		if (keyboard.keyDownOnce(KeyboardInput.KEY_T)) {
-			this.DISPLAY_TIMING = !this.DISPLAY_TIMING;
-		}
+//		if (keyboard.keyDown(KeyboardInput.KEY_A)) {
+//			screenOffsetX += 1;
+//		}
+//		if (keyboard.keyDown(KeyboardInput.KEY_D)) {
+//			screenOffsetX -= 1;
+//		}
+//		if (keyboard.keyDown(KeyboardInput.KEY_S)) {
+//			screenOffsetY += 1;
+//		}
+//		if (keyboard.keyDown(KeyboardInput.KEY_X)) {
+//			screenOffsetY -= 1;
+//		}
+//		if (keyboard.keyDownOnce(KeyboardInput.KEY_G)) {
+//			this.SHOW_GRID = !this.SHOW_GRID;
+//		}
+//		if (keyboard.keyDownOnce(KeyboardInput.KEY_T)) {
+//			this.DISPLAY_TIMING = !this.DISPLAY_TIMING;
+//		}
 	}
 
 	/*
